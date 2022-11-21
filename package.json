@@ -6,8 +6,12 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "export": "next build && next export"
   },
+  "browserslist": [
+    "> 0.5%, firefox 52"
+  ],
   "dependencies": {
     "@material-tailwind/react": "^1.2.4",
     "axios": "^1.1.3",
