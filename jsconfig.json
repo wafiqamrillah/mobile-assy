@@ -1,0 +1,12 @@
+{
+    "compilerOptions": {
+      "target": "es5",
+      "jsx": "preserve",
+      "baseUrl": "src/",
+      "paths": {
+        "@/*": ["./*"]
+      }
+    },
+    "exclude": ["node_modules"]
+  }
+  
