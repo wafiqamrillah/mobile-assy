@@ -8,6 +8,6 @@
 
 @layer components {
   body {
-    @apply bg-red-900;
+    @apply bg-indigo-900;
   }
 }
