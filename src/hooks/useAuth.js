@@ -11,9 +11,7 @@ export default function useAuth({ middleware, redirectIfAuthenticated } = {}) {
         async (...args) => axios
             .get(args)
             .then(res => res.data !== '' ? res.data : false)
-            .catch(error => {
-                throw error;
-            })
+            .catch(error => error)
     );
 
     const login = async ({ setErrors, setStatus, ...props }) => {
@@ -33,7 +31,6 @@ export default function useAuth({ middleware, redirectIfAuthenticated } = {}) {
         }
 
         router.replace('/login');
-        // window.location.pathname = '/login';
     }
 
     useEffect(() => {

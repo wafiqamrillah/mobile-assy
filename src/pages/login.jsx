@@ -1,5 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import Image from 'next/image';
+import Swal from 'sweetalert2';
+import withReactContent from 'sweetalert2-react-content';
 
 // Components
 import AppLayout from '@/components/layouts/AppLayout';
@@ -15,6 +17,8 @@ export default function Login() {
     const auth = useAuth({ middleware: 'guest', redirectIfAuthenticated: '/' });
     
     const qrCodeInputEl = useRef(null);
+
+    const FireSwal = withReactContent(Swal);
 
     useEffect(() => {
         document.addEventListener('keypress', handleKeyUpEvent);
@@ -44,6 +48,25 @@ export default function Login() {
 
             return await auth.login({ setErrors, setStatus, idcard: inputValue });
         })()
+            .catch(err => {
+                if (err.response?.status == 404) {
+                    return FireSwal.fire({
+                        icon: 'error',
+                        title: <strong>Error</strong>,
+                        html: <span>Data login user tidak ditemukan</span>,
+                        showConfirmButton: false,
+                        timer: 3000
+                    });
+                }
+
+                return FireSwal.fire({
+                    icon: 'error',
+                    title: <strong>Error</strong>,
+                    html: <span>{ err.response?.statusText ?? err.message ?? 'Terjadi kesalahan. Silahkan lapor ke bagian IT!' }</span>,
+                    showConfirmButton: false,
+                    timer: 3000
+                });
+            })
             .finally(
                 () => setIsLoading(false)
             );
