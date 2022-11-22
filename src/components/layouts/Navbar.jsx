@@ -1,9 +1,10 @@
 import Image from 'next/image';
+import Link from 'next/link';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 
 // Hooks
 import useAuth from '@/hooks/useAuth';
-import { faRightFromBracket } from '@fortawesome/free-solid-svg-icons';
+import { faAngleLeft, faRightFromBracket } from '@fortawesome/free-solid-svg-icons';
 
 export default function Navbar (){
     const { data: auth, logout } = useAuth({ middleware: 'auth' });
@@ -13,6 +14,19 @@ export default function Navbar (){
     return (
         <nav className="fixed top-0 w-full z-30">
             <div className="h-12 px-4 py-1 bg-gradient-to-b from-blue-400 to-blue-700 shadow-lg flex items-center justify-between">
+                <div>
+                    {
+                        window.location.pathname !== '/' && (
+                            <Link href="/">
+                                <button
+                                    type="button"
+                                    className="p-2 hover:bg-gradient-to-b focus:bg-gradient-to-b hover:from-blue-100 focus:from-blue-800 hover:to-blue-600 focus:to-blue-400 border border-transparent hover:border-gray-100 focus:border-gray-700 hover:cursor-pointer focus:outline-none rounded-xl">
+                                    <FontAwesomeIcon icon={faAngleLeft} size="xl"/>
+                                </button>
+                            </Link>
+                        )
+                    }
+                </div>
                 <div>
                     <Image
                         src="logo.png"
