@@ -57,7 +57,7 @@ export default function AdjustQty() {
             qrCodeInputEl.current.value += e.key;
         } else {
             console.log(qrCodeInputEl.current.value);
-            submit();
+            submitScan();
         }
     }
 
@@ -110,7 +110,7 @@ export default function AdjustQty() {
         setWorkOrderSFG({});
     }
 
-    const submit = () => {
+    const submitScan = () => {
         const inputValue = qrCodeInputEl.current.value;
 
         (async () => {
