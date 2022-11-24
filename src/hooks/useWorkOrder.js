@@ -58,10 +58,48 @@ export default function useWorkOrder() {
         
         return partFinishGood.idabas_s == workOrderSFG.idabas;
     }
+
+    const getSFGOutstandingLabels = async (workOrderSFGNumber) => {
+        return await axios
+            .get(
+                `http://msi-ps.test/api/datalabel/get_sfg_outstanding_label_by_wo/${workOrderSFGNumber}`
+            )
+            .then(res => res.data)
+            .catch(err => {
+                if (err.response?.status == 404) {
+                    throw new Error("Data tidak ditemukan atau bukan work order semi finish good.");
+                } else {
+                    throw err;
+                }
+            });
+    }
+
+    const adjustQuantity = async (workOrderFG, workOrderSFG, form) => {
+        form.work_order_finish_good_number = workOrderFG.number;
+        form.work_order_semi_finish_good_number = workOrderSFG.number;
+
+        return await axios
+            .post(
+                `http://msi-ps.test/api/workorder/adjust_qty`, form
+            )
+            .then(res => {
+                const response = res.data;
+
+                if (!response.status) throw new Error('There is no response data status from server.');
+                if (response.status !== 'success') throw new Error(response.message ?? 'Proses input gagal'); 
+
+                return res.data;
+            })
+            .catch(err => {
+                throw new Error(err.response?.statusText ?? err.message);
+            });
+    }
     
     return {
         findFinishGoodWorkOrder,
         findSemiFinishGoodWorkOrder,
-        checkCompabilityWorkOrder
+        checkCompabilityWorkOrder,
+        getSFGOutstandingLabels,
+        adjustQuantity
     };
 }

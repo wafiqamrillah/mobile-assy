@@ -27,6 +27,8 @@ export default function AdjustQty() {
     const [workOrderFG, setWorkOrderFG] = useState({});
     const [workOrderSFG, setWorkOrderSFG] = useState({});
     const [inputAdjustmentQty, setInputAdjustmentQty] = useState(0);
+    const [sfgOutstandingLabelQty, setSfgOutstandingLabelQty] = useState(0);
+    const [maximumQty, setMaximumQty] = useState(0);
 
     // References
     const qrCodeInputEl = useRef(null);
@@ -46,10 +48,43 @@ export default function AdjustQty() {
         setIsScanWoSFG(!workOrderSFG?.number);
         setScanStatus(!workOrderFG?.number ? 'scan_wo_fg' : (!workOrderSFG?.number ? 'scan_wo_sfg' : 'input_adjustment'));
 
+        if (workOrderFG.id && workOrderSFG.id && scanStatus !== "input_adjustment") {
+            (
+                async() => {
+                    const isCompatiblePart = await WorkOrder.checkCompabilityWorkOrder(workOrderFG, workOrderSFG)
+                        .catch(error => {
+                            setWorkOrderSFG({});
+                            throw error;
+                        });
+                    
+                    if (!isCompatiblePart) {
+                        setWorkOrderSFG({});
+        
+                        throw new Error("Work order tidak sesuai");
+                    }
+        
+                    const currentSFGOutstandingLabels = await WorkOrder.getSFGOutstandingLabels(workOrderSFG.number);
+                    const currentOutstandingLabelQty = currentSFGOutstandingLabels.length + workOrderSFG.outstanding_qty;
+                    
+                    setSfgOutstandingLabelQty(currentOutstandingLabelQty);
+                    setMaximumQty(workOrderFG.outstanding_qty > currentOutstandingLabelQty ? currentOutstandingLabelQty : workOrderFG.outstanding_qty);
+                }
+            )()
+                .catch(err => {
+                    return FireSwal.fire({
+                        icon: 'error',
+                        title: <strong>Error</strong>,
+                        html: <span>{ err.response?.statusText ?? err.message ?? 'Terjadi kesalahan. Silahkan lapor ke bagian IT!' }</span>,
+                        showConfirmButton: false,
+                        timer: 3000
+                    });
+                });
+        }
+
         return () => {
             document.removeEventListener('keypress', handleKeyPressEvent);
         };
-    }, [workOrderFG, workOrderSFG, isScanWoFG, isScanWoSFG]);
+    }, [workOrderFG, workOrderSFG, isScanWoFG, isScanWoSFG, sfgOutstandingLabelQty, maximumQty]);
 
     const handleKeyPressEvent = (e) => {
         console.log('keypressed');
@@ -85,8 +120,8 @@ export default function AdjustQty() {
             currentNumbers += number;
         }
 
-        if (parseInt(currentNumbers) > (workOrderSFG?.outstanding_qty ?? 0)) {
-            currentNumbers = workOrderSFG?.outstanding_qty ?? 0;
+        if (parseInt(currentNumbers) > maximumQty ) {
+            currentNumbers = maximumQty;
         }
 
         setInputAdjustmentQty(currentNumbers);
@@ -103,11 +138,93 @@ export default function AdjustQty() {
         setInputAdjustmentQty(currentNumbers);
     }
 
-    const openConfirmationModal = () => {}
+    const openConfirmationModal = () => {
+        FireSwal.mixin({
+            customClass: {
+                confirmButton: 'px-6 py-2 bg-green-600 hover:bg-green-400 focus:bg-green-800 disabled:bg-green-300 rounded-lg text-white',
+                cancelButton: 'px-6 py-2 bg-red-600 hover:bg-red-400 focus:bg-red-800 disabled:bg-red-300 rounded-lg text-white'
+            },
+            buttonsStyling: false
+        }).fire({
+            title: 'Konfirmasi',
+            text: "Anda akan mengubah quantity data work order. Anda yakin?",
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonText: 'Ya',
+            cancelButtonText: 'Tidak'
+        }).then((result) => {
+            if (result.isConfirmed) {
+                submitAdjustmentForm();
+            }
+        });
+    }
+
+    const submitAdjustmentForm = () => {
+        try {
+            const adjustmentQty = typeof (adjustmentQtyEl.current?.value ?? 0) === "numeric" ? adjustmentQtyEl.current?.value ?? 0 : parseInt(adjustmentQtyEl.current?.value);
+
+            if (adjustmentQty <= 0) {
+                throw new Error("Nilai adjustment qty tidak valid");
+            } else if(adjustmentQty > maximumQty) {
+                throw new Error("Nilai adjustment qty melebihi outstanding qty");
+            }
+
+            (async () => {
+                setIsLoading(true);
+
+                if (!workOrderFG.id) {
+                    setWorkOrderFG({});
+                    throw new Error("Data work order finish good tidak valid. Mohon scan kembali data work order finish good.");
+                }
+
+                if (!workOrderSFG.id) {
+                    setWorkOrderSFG({});
+                    throw new Error("Data work order semi finish good tidak valid. Mohon scan kembali data work order semi finish good.");
+                }
+
+                const form = {
+                    'adjustment_qty' : adjustmentQty
+                };
+                
+                const processResponse = await WorkOrder.adjustQuantity(workOrderFG, workOrderSFG, form);
+
+                FireSwal.fire({
+                    icon: 'success',
+                    title: <strong>Success</strong>,
+                    html: <span>{ processResponse.message ?? "Data berhasil dibuat" }</span>,
+                    timer: 5000
+                });
+
+                return resetForm();
+            })()
+                .catch(err => {
+                    FireSwal.fire({
+                        icon: 'error',
+                        title: <strong>Error</strong>,
+                        html: <span>{ err.message }</span>,
+                        showConfirmButton: false,
+                        timer: 3000
+                    });
+                })
+                .finally(() => setIsLoading(false));
+        } catch (error) {
+            FireSwal.fire({
+                icon: 'error',
+                title: <strong>Error</strong>,
+                html: <span>{ error.message }</span>,
+                showConfirmButton: false,
+                timer: 3000
+            });
+        }
+    }
 
     const resetForm = () => {
+        adjustmentQtyEl.current.value = 0;
+        setInputAdjustmentQty(0);
         setWorkOrderFG({});
         setWorkOrderSFG({});
+        setSfgOutstandingLabelQty(0);
+        setMaximumQty(0);
     }
 
     const submitScan = () => {
@@ -121,7 +238,6 @@ export default function AdjustQty() {
             }
 
             let result;
-            let currentWorkOrderFG = workOrderFG, currentWorkOrderSFG = workOrderSFG;
 
             switch (scanStatus) {
                 case 'scan_wo_fg':
@@ -129,8 +245,6 @@ export default function AdjustQty() {
 
                     if (result) {
                         setWorkOrderFG(result);
-
-                        currentWorkOrderFG = result;
                     }
                     break;
                 case 'scan_wo_sfg':
@@ -138,8 +252,6 @@ export default function AdjustQty() {
 
                     if (result) {
                         setWorkOrderSFG(result);
-
-                        currentWorkOrderSFG = result;
                     }
                     break;
                 default:
@@ -148,20 +260,6 @@ export default function AdjustQty() {
 
             if (!result) {
                 throw new Error("Data tidak ditemukan.");
-            }
-
-            if (currentWorkOrderFG.id && currentWorkOrderSFG.id && scanStatus !== "input_adjustment") {
-                const isCompatiblePart = await WorkOrder.checkCompabilityWorkOrder(currentWorkOrderFG, currentWorkOrderSFG)
-                    .catch(error => {
-                        setWorkOrderSFG({});
-                        throw error;
-                    });
-                
-                if (!isCompatiblePart) {
-                    setWorkOrderSFG({});
-
-                    throw new Error("Work order tidak sesuai");
-                }
             }
         })()
             .catch(err => {
@@ -207,54 +305,54 @@ export default function AdjustQty() {
 
                         {/* Identity */}
                         <div className="flex flex-col space-y-2">
-                            <div className="flex flex-auto items-center">
+                            <div className="grid grid-cols-12 items-center">
                                 <label
                                     htmlFor="work_order_fg_number"
-                                    className="w-1/3 text-sm font-bold">
+                                    className="col-span-4 text-sm font-bold">
                                     Number
                                 </label>
                                 <input
                                     type="text"
-                                    className="p-1 w-32 text-sm border border-gray-400 rounded-lg focus:outline-none"
+                                    className="p-1 col-span-4 text-sm border border-gray-400 rounded-lg focus:outline-none"
                                     name="work_order_fg_number"
                                     value={ workOrderFG?.number || '' }
                                     readOnly />
                             </div>
-                            <div className="flex flex-auto items-center">
+                            <div className="grid grid-cols-12 items-center">
                                 <label
                                     htmlFor="work_order_fg_part_name"
-                                    className="w-1/3 text-sm font-bold">
+                                    className="col-span-4 text-sm font-bold">
                                     Part Name
                                 </label>
                                 <input
                                     type="text"
-                                    className="p-1 flex-auto text-sm border border-gray-400 rounded-lg focus:outline-none"
+                                    className="p-1 col-span-8 text-sm border border-gray-400 rounded-lg focus:outline-none"
                                     name="work_order_fg_part_name"
                                     value={ workOrderFG?.partdesc || '' }
                                     readOnly />
                             </div>
-                            <div className="flex flex-auto items-center">
+                            <div className="grid grid-cols-12 items-center">
                                 <label
                                     htmlFor="work_order_fg_order_qty"
-                                    className="w-1/3 text-sm font-bold">
+                                    className="col-span-4 text-sm font-bold">
                                     WO Qty
                                 </label>
                                 <input
                                     type="number"
-                                    className="p-1 w-32 text-right text-sm border border-gray-400 rounded-lg focus:outline-none"
+                                    className="p-1 col-span-4 text-sm text-right border border-gray-400 rounded-lg focus:outline-none"
                                     name="work_order_fg_order_qty"
                                     value={ workOrderFG?.order_qty ?? 0 }
                                     readOnly />
                             </div>
-                            <div className="flex flex-auto items-center">
+                            <div className="grid grid-cols-12 items-center">
                                 <label
                                     htmlFor="work_order_fg_outstanding_qty"
-                                    className="w-1/3 text-sm font-bold">
+                                    className="col-span-4 text-sm font-bold">
                                     Outstanding Qty
                                 </label>
                                 <input
                                     type="number"
-                                    className="p-1 w-32 text-right text-sm border border-gray-400 rounded-lg focus:outline-none"
+                                    className="p-1 col-span-4 text-sm text-right border border-gray-400 rounded-lg focus:outline-none"
                                     name="work_order_fg_outstanding_qty"
                                     value={ workOrderFG?.outstanding_qty ?? 0 }
                                     readOnly />
@@ -297,41 +395,54 @@ export default function AdjustQty() {
 
                         {/* Identity */}
                         <div className="flex flex-col space-y-2">
-                            <div className="flex flex-auto items-center">
+                            <div className="grid grid-cols-12 items-center">
                                 <label
                                     htmlFor="work_order_sfg_number"
-                                    className="w-1/3 text-sm font-bold">
+                                    className="col-span-4 text-sm font-bold">
                                     Number
                                 </label>
                                 <input
                                     type="text"
-                                    className="p-1 w-32 text-sm border border-gray-400 rounded-lg focus:outline-none"
+                                    className="p-1 col-span-4 text-sm text-right border border-gray-400 rounded-lg focus:outline-none"
                                     name="work_order_sfg_number"
                                     value={ workOrderSFG?.number || '' }
                                     readOnly />
                             </div>
-                            <div className="flex flex-auto items-center">
+                            <div className="grid grid-cols-12 items-center">
                                 <label
                                     htmlFor="work_order_sfg_part_name"
-                                    className="w-1/3 text-sm font-bold">
+                                    className="col-span-4 text-sm font-bold">
                                     Part Name
                                 </label>
                                 <input
                                     type="text"
-                                    className="p-1 flex-auto text-sm border border-gray-400 rounded-lg focus:outline-none"
+                                    className="p-1 col-span-8 text-sm border border-gray-400 rounded-lg focus:outline-none"
                                     name="work_order_sfg_part_name"
                                     value={ workOrderSFG?.partdesc || '' }
                                     readOnly />
                             </div>
-                            <div className="flex flex-auto items-center">
+                            <div className="grid grid-cols-12 items-center">
+                                <label
+                                    htmlFor="work_order_sfg_wo_qty"
+                                    className="col-span-4 text-sm font-bold">
+                                    WO Qty
+                                </label>
+                                <input
+                                    type="number"
+                                    className="p-1 col-span-4 text-sm text-right border border-gray-400 rounded-lg focus:outline-none"
+                                    name="work_order_sfg_wo_qty"
+                                    value={ workOrderSFG?.order_qty ?? 0 }
+                                    readOnly />
+                            </div>
+                            <div className="grid grid-cols-12 items-center">
                                 <label
                                     htmlFor="work_order_sfg_outstanding_qty"
-                                    className="w-1/3 text-sm font-bold">
+                                    className="col-span-4 text-sm font-bold">
                                     Outstanding Qty
                                 </label>
                                 <input
                                     type="number"
-                                    className="p-1 w-32 text-right text-sm border border-gray-400 rounded-lg focus:outline-none"
+                                    className="p-1 col-span-4 text-sm text-right border border-gray-400 rounded-lg focus:outline-none"
                                     name="work_order_sfg_outstanding_qty"
                                     value={ workOrderSFG?.outstanding_qty ?? 0 }
                                     readOnly />
@@ -370,6 +481,19 @@ export default function AdjustQty() {
                         <div className="flex flex-col space-y-2">
                             <div className="flex flex-auto items-center">
                                 <label
+                                    htmlFor="result_qty"
+                                    className="w-1/3 text-sm font-bold">
+                                    Label SFG Outstanding Qty
+                                </label>
+                                <input
+                                    type="number"
+                                    className="p-1 w-32 text-right text-sm border border-gray-400 rounded-lg focus:outline-none"
+                                    name="result_qty"
+                                    value={ sfgOutstandingLabelQty }
+                                    readOnly />
+                            </div>
+                            <div className="flex flex-auto items-center">
+                                <label
                                     htmlFor="adjustment_qty"
                                     className="w-1/3 text-sm font-bold">
                                     Adjustment Qty
@@ -396,7 +520,7 @@ export default function AdjustQty() {
                                         type="number"
                                         className="w-3/6 p-1 text-right text-sm border border-gray-400 rounded-lg focus:outline-none"
                                         name="maximum_adjustment_qty"
-                                        value={ workOrderSFG?.outstanding_qty ?? 0 }
+                                        value={ maximumQty }
                                         readOnly />
                                 </div>
                             </div>
@@ -430,7 +554,7 @@ export default function AdjustQty() {
                     <button
                         className="p-4 bg-green-600 disabled:bg-green-300 rounded-lg"
                         onClick={ () => openConfirmationModal() }
-                        disabled={ !(adjustmentQtyEl.current?.value > 0) }>
+                        disabled={ !workOrderFG.id || !workOrderSFG.id || (!(adjustmentQtyEl.current?.value > 0)) }>
                         <span className="text-xl mr-2">
                             <FontAwesomeIcon icon={ faCheckCircle } />
                         </span> Adjust
@@ -445,9 +569,9 @@ export default function AdjustQty() {
                         
                     {
                         isShowAdjustmentModal && (
-                            <div className="fixed inset-0 flex items-center transition z-10">
+                            <div className="fixed inset-0 flex items-center transition z-50">
                                 <div
-                                    className="absolute inset-0 transform transition-all">
+                                    className="fixed inset-0 transform transition-all">
                                     <div className="absolute inset-0 bg-black opacity-75"></div>
                                 </div>
 
@@ -473,10 +597,10 @@ export default function AdjustQty() {
                                         {/* Body */}
                                         <div className="flex flex-col space-y-6">
                                             <div className="flex items-center justify-center text-4xl">
-                                                { inputAdjustmentQty } / { workOrderSFG?.outstanding_qty ?? 0 }
+                                                { inputAdjustmentQty } / { maximumQty }
                                             </div>
                                             
-                                            <div className="w-full grid grid-cols-3 gap-5">
+                                            <div className="w-full grid grid-cols-3 gap-2">
                                                 {
                                                     ([1, 2, 3, 4, 5, 6, 7, 8, 9]).map((number) => {
                                                         return (
@@ -484,7 +608,7 @@ export default function AdjustQty() {
                                                                 key={ `numpad${number}` }
                                                                 type="button"
                                                                 onClick={ () => handleAdjustmentQtyChangeEvent(`${number}`) }
-                                                                className="px-8 py-6 bg-gray-400 hover:bg-gray-300 focus:bg-gray-600 rounded-xl text-2xl text-center font-semibold focus:outline-none">
+                                                                className="px-6 py-2 bg-gray-400 hover:bg-gray-300 focus:bg-gray-600 rounded-xl text-2xl text-center font-semibold focus:outline-none">
                                                                 { number }
                                                             </button>
                                                         );
@@ -495,7 +619,7 @@ export default function AdjustQty() {
                                                 <button
                                                     type="button"
                                                     onClick={ () => clearAdjustmentQtyEvent() }
-                                                    className="px-8 py-6 bg-gray-400 hover:bg-gray-300 focus:bg-gray-600 rounded-xl text-2xl text-center font-semibold focus:outline-none">
+                                                    className="px-6 py-2 bg-gray-400 hover:bg-gray-300 focus:bg-gray-600 rounded-xl text-2xl text-center font-semibold focus:outline-none">
                                                     <FontAwesomeIcon icon={ faArrowLeft }/>
                                                 </button>
 
@@ -503,7 +627,7 @@ export default function AdjustQty() {
                                                 <button
                                                     type="button"
                                                     onClick={ () => handleAdjustmentQtyChangeEvent("0") }
-                                                    className="px-8 py-6 bg-gray-400 hover:bg-gray-300 focus:bg-gray-600 rounded-xl text-2xl text-center font-semibold focus:outline-none">
+                                                    className="px-6 py-2 bg-gray-400 hover:bg-gray-300 focus:bg-gray-600 rounded-xl text-2xl text-center font-semibold focus:outline-none">
                                                     0
                                                 </button>
                                                 
@@ -511,7 +635,7 @@ export default function AdjustQty() {
                                                 <button
                                                     type="button"
                                                     onClick={ () => confirmAdjustmentQtyEvent() }
-                                                    className="px-8 py-6 bg-gray-400 hover:bg-gray-300 focus:bg-gray-600 rounded-xl text-2xl text-center font-semibold focus:outline-none">
+                                                    className="px-6 py-2 bg-gray-400 hover:bg-gray-300 focus:bg-gray-600 rounded-xl text-2xl text-center font-semibold focus:outline-none">
                                                     <FontAwesomeIcon icon={ faCheck }/>
                                                 </button>
                                             </div>
