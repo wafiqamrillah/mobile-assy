@@ -1,32 +1,34 @@
 import { useState } from 'react';
-import Image from 'next/image';
+import Link from 'next/link';
 
 // Components
 import AppLayout from '@/components/layouts/AppLayout';
-
-// Hooks
-import useAuth from '@/hooks/useAuth';
+import Navbar from '@/components/layouts/Navbar';
 
 export default function Index() {
-  const { data: auth } = useAuth({ middleware: 'auth' });
-
   const [isLoading, setIsLoading] = useState(false);
 
   return (
     <AppLayout
       isLoading={ isLoading }>
-      <div className="h-12 w-full bg-gradient-to-b from-blue-400 via-blue-800 to-blue-400 px-4 py-1 flex items-center justify-between">
-        <div className="w-1/4">
-          <div className="inline-flex items-center h-8">
-            <Image
-              src="logo.png"
-              alt="Logo PT Mah Sing Indonesia"
-              width={50}
-              height={50}
-            />
-          </div>
+        <Navbar />
+        
+        <div className="pt-16 flex-auto flex flex-col items-center justify-center">
+          {
+            ([
+              {href : '/adjust_qty', label: 'Adjust Qty'}
+            ]).map((item, index) => {
+              return (
+                <Link key={ `button#${index}` } href={ item.href }>
+                  <button
+                    className="p-6 bg-gradient-to-b from-blue-400 to-blue-800 hover:from-blue-100 hover:to-blue-400 border focus:from-blue-900 focus:to-blue-600 border-gray-500 rounded-lg focus:outline-none">
+                    { item.label }
+                  </button>
+                </Link>
+              );
+            })
+          }
         </div>
-      </div>
     </AppLayout>
   )
 }
