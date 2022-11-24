@@ -1,3 +1,4 @@
+import { useState, useEffect } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
@@ -8,26 +9,31 @@ import { faAngleLeft, faRightFromBracket } from '@fortawesome/free-solid-svg-ico
 
 export default function Navbar (){
     const { data: auth, logout } = useAuth({ middleware: 'auth' });
+    const [currentLocation, setCurrentLocation] = useState('');
 
     const handleLogoutButton = () => logout();
 
+    useEffect(() => {
+        setCurrentLocation(window.location.pathname);
+    }, [currentLocation]);
+
     return (
         <nav className="fixed top-0 w-full z-30">
-            <div className="h-12 px-4 py-1 bg-gradient-to-b from-blue-400 to-blue-700 shadow-lg flex items-center justify-between">
-                <div>
+            <div className="h-12 px-4 py-1 bg-gradient-to-b from-blue-400 to-blue-700 shadow-lg grid grid-cols-3 content-center place-items-center">
+                <div className="justify-self-start">
                     {
-                        window.location.pathname !== '/' && (
+                        currentLocation !== '/' && (
                             <Link href="/">
                                 <button
                                     type="button"
-                                    className="p-2 hover:bg-gradient-to-b focus:bg-gradient-to-b hover:from-blue-100 focus:from-blue-800 hover:to-blue-600 focus:to-blue-400 border border-transparent hover:border-gray-100 focus:border-gray-700 hover:cursor-pointer focus:outline-none rounded-xl">
+                                    className="px-4 py-2 hover:bg-gradient-to-b focus:bg-gradient-to-b hover:from-blue-100 focus:from-blue-800 hover:to-blue-600 focus:to-blue-400 border border-transparent hover:border-gray-100 focus:border-gray-700 hover:cursor-pointer focus:outline-none rounded-xl">
                                     <FontAwesomeIcon icon={faAngleLeft} size="xl"/>
                                 </button>
                             </Link>
                         )
                     }
                 </div>
-                <div>
+                <div className="justify-self-center">
                     <Image
                         src="logo.png"
                         alt="Logo PT Mah Sing Indonesia"
@@ -35,11 +41,11 @@ export default function Navbar (){
                         height={50}
                     />
                 </div>
-                <div>
+                <div className="justify-self-end">
                     <button
                         type="button"
                         onClick={ () => handleLogoutButton() }
-                        className="p-2 hover:bg-gradient-to-b focus:bg-gradient-to-b hover:from-blue-100 focus:from-blue-800 hover:to-blue-600 focus:to-blue-400 border border-transparent hover:border-gray-100 focus:border-gray-700 hover:cursor-pointer focus:outline-none rounded-xl">
+                        className="px-4 py-2 hover:bg-gradient-to-b focus:bg-gradient-to-b hover:from-blue-100 focus:from-blue-800 hover:to-blue-600 focus:to-blue-400 border border-transparent hover:border-gray-100 focus:border-gray-700 hover:cursor-pointer focus:outline-none rounded-xl">
                         <FontAwesomeIcon icon={faRightFromBracket} size="xl"/>
                     </button>
                 </div>
