@@ -1,5 +1,7 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  basePath: '/mobile-assy',
+  trailingSlash: true,
   reactStrictMode: true,
   swcMinify: true,
   images: {
