@@ -33,6 +33,7 @@ export default function AdjustQty() {
     // References
     const qrCodeInputEl = useRef(null);
     const adjustmentQtyEl = useRef(0);
+    const lineNumberEl = useRef(null);
 
     // Hooks
     const WorkOrder = useWorkOrder();
@@ -169,6 +170,12 @@ export default function AdjustQty() {
                 throw new Error("Nilai adjustment qty melebihi outstanding qty");
             }
 
+            const lineNumber = lineNumberEl.current?.value;
+
+            if (!lineNumber || lineNumber === '') {
+                throw new Error("Nomor line harus diisi");
+            }
+
             (async () => {
                 setIsLoading(true);
 
@@ -183,7 +190,8 @@ export default function AdjustQty() {
                 }
 
                 const form = {
-                    'adjustment_qty' : adjustmentQty
+                    'adjustment_qty' : adjustmentQty,
+                    'line_number'    : lineNumber
                 };
                 
                 const processResponse = await WorkOrder.adjustQuantity(workOrderFG, workOrderSFG, form);
@@ -220,6 +228,7 @@ export default function AdjustQty() {
 
     const resetForm = () => {
         adjustmentQtyEl.current.value = 0;
+        lineNumberEl.current.value = null;
         setInputAdjustmentQty(0);
         setWorkOrderFG({});
         setWorkOrderSFG({});
@@ -360,7 +369,7 @@ export default function AdjustQty() {
                         </div>
                         
                         {
-                            isScanWoFG && (
+                            isScanWoFG ? (
                                 <div className="absolute inset-0 flex items-center transition z-10">
                                     <div
                                         className="absolute inset-0 transform transition-all">
@@ -373,7 +382,7 @@ export default function AdjustQty() {
                                         </span>
                                     </div>
                                 </div>
-                            )
+                            ) : null
                         }
                     </div>
                     
@@ -450,7 +459,7 @@ export default function AdjustQty() {
                         </div>
                         
                         {
-                            (isScanWoSFG || isScanWoFG) && (
+                            (isScanWoSFG || isScanWoFG) ? (
                                 <div className="absolute inset-0 flex items-center transition z-10">
                                     <div
                                         className="absolute inset-0 transform transition-all">
@@ -463,7 +472,7 @@ export default function AdjustQty() {
                                         </span>
                                     </div>
                                 </div>
-                            )
+                            ) : null
                         }
                     </div>
 
@@ -491,6 +500,22 @@ export default function AdjustQty() {
                                     name="result_qty"
                                     value={ sfgOutstandingLabelQty }
                                     readOnly />
+                            </div>
+                            <div className="flex flex-auto items-center">
+                                <label
+                                    htmlFor="adjustment_qty"
+                                    className="w-1/3 text-sm font-bold">
+                                    Line
+                                </label>
+                                <select
+                                    ref={ lineNumberEl }
+                                    name="line_number"
+                                    defaultValue={ null }
+                                    className={ "p-1 w-32 text-center text-sm rounded-lg focus:outline-none " + (!isScanWoFG && !isScanWoSFG ? 'bg-blue-400 hover:cursor-pointer border-4 border-blue-200' : 'border border-gray-400') }>
+                                        <option value={ '' }>--Pilih Line--</option>
+                                        <option value={ 1 }>1</option>
+                                        <option value={ 2 }>2</option>
+                                </select>
                             </div>
                             <div className="flex flex-auto items-center">
                                 <label
@@ -540,14 +565,14 @@ export default function AdjustQty() {
                         </div>
                         
                         {
-                            (isScanWoSFG || isScanWoFG) && (
+                            (isScanWoSFG || isScanWoFG) ? (
                                 <div className="absolute inset-0 flex items-center transition z-10">
                                     <div
                                         className="absolute inset-0 transform transition-all">
                                         <div className="absolute inset-0 bg-black rounded-lg opacity-75"></div>
                                     </div>
                                 </div>
-                            )
+                            ) : null
                         }
                     </div>
 
@@ -568,7 +593,7 @@ export default function AdjustQty() {
                     </button>
                         
                     {
-                        isShowAdjustmentModal && (
+                        isShowAdjustmentModal ? (
                             <div className="fixed inset-0 flex items-center transition z-50">
                                 <div
                                     className="fixed inset-0 transform transition-all">
@@ -643,7 +668,7 @@ export default function AdjustQty() {
                                     </div>
                                 </div>
                             </div>
-                        )
+                        ) : null
                     }
                 </div>
             </div>
