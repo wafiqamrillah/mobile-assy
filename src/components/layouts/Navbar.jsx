@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
+import { useRouter } from 'next/router';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 
 // Hooks
@@ -8,6 +9,7 @@ import useAuth from '@/hooks/useAuth';
 import { faAngleLeft, faRightFromBracket } from '@fortawesome/free-solid-svg-icons';
 
 export default function Navbar (){
+    const router = useRouter();
     const { data: auth, logout } = useAuth({ middleware: 'auth' });
     const [currentLocation, setCurrentLocation] = useState('');
 
@@ -22,7 +24,7 @@ export default function Navbar (){
             <div className="h-12 px-4 py-1 bg-gradient-to-b from-blue-400 to-blue-700 shadow-lg grid grid-cols-3 content-center place-items-center">
                 <div className="justify-self-start">
                     {
-                        currentLocation !== '/' && (
+                        currentLocation !== '/' ? (
                             <Link href="/">
                                 <button
                                     type="button"
@@ -30,12 +32,12 @@ export default function Navbar (){
                                     <FontAwesomeIcon icon={faAngleLeft} size="xl"/>
                                 </button>
                             </Link>
-                        )
+                        ) : null
                     }
                 </div>
                 <div className="justify-self-center">
                     <Image
-                        src="logo.png"
+                        src={ `${router.basePath}/logo.png` }
                         alt="Logo PT Mah Sing Indonesia"
                         width={50}
                         height={50}

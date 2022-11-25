@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
+import { useRouter } from 'next/router';
 import Image from 'next/image';
 import Swal from 'sweetalert2';
 import withReactContent from 'sweetalert2-react-content';
@@ -15,6 +16,7 @@ export default function Login() {
     const [status, setStatus] = useState(null);
 
     const auth = useAuth({ middleware: 'guest', redirectIfAuthenticated: '/' });
+    const router = useRouter();
     
     const qrCodeInputEl = useRef(null);
 
@@ -82,7 +84,7 @@ export default function Login() {
                     <div className="flex flex-col space-y-3">
                         <div className="flex items-center justify-center space-x-3">
                             <Image
-                                src="logo.png"
+                                src={ `${router.basePath}/logo.png` }
                                 alt="Logo PT Mah Sing Indonesia"
                                 width={50}
                                 height={50}
