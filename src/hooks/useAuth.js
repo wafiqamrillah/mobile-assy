@@ -7,7 +7,7 @@ export default function useAuth({ middleware, redirectIfAuthenticated } = {}) {
     const router = useRouter();
 
     const { data, error, mutate } = useSWR(
-        `http://msi-ps.test/api/auth/get`,
+        `http://192.168.0.114:8081/api/auth/get`,
         async (...args) => axios
             .get(args)
             .then(res => res.data !== '' ? res.data : false)
@@ -19,18 +19,21 @@ export default function useAuth({ middleware, redirectIfAuthenticated } = {}) {
         setStatus(null);
 
         return await axios
-            .post(`http://msi-ps.test/api/auth/login`, props)
+            .post(`http://192.168.0.114:8081/api/auth/login`, props)
             .then(() => mutate());
     }
 
     const logout = async () => {
         if (! error) {
             await axios
-                .post(`http://msi-ps.test/api/auth/logout`)
+                .post(`http://192.168.0.114:8081/api/auth/logout`)
                 .then(() => mutate());
         }
 
-        router.replace('/login');
+        router.push({
+            pathname: '/login',
+            query: { returnUrl: router.asPath }
+        });
     }
 
     useEffect(() => {

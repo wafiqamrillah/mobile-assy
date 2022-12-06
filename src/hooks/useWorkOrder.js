@@ -3,7 +3,7 @@ import axios from "axios";
 export default function useWorkOrder() {
     const findFinishGoodWorkOrder = async (number) => {
         return await axios.get(
-            `http://msi-ps.test/api/workorder/find_finish_good/${number}`
+            `http://192.168.0.114:8081/api/workorder/find_finish_good/${number}`
         )
         .then(res => res.data)
         .catch(err => {
@@ -17,7 +17,7 @@ export default function useWorkOrder() {
 
     const findSemiFinishGoodWorkOrder = async (number) => {
         return await axios.get(
-            `http://msi-ps.test/api/workorder/find_semi_finish_good/${number}`
+            `http://192.168.0.114:8081/api/workorder/find_semi_finish_good/${number}`
         )
         .then(res => res.data)
         .catch(err => {
@@ -46,7 +46,7 @@ export default function useWorkOrder() {
             throw new Error('Tidak ada data part semi finish good yang diperiksa');
         }
 
-        const partFinishGood = await axios.get(`http://msi-ps.test/api/part/find_by_idabas/${workOrderFG.idabas}`)
+        const partFinishGood = await axios.get(`http://192.168.0.114:8081/api/part/find_by_idabas/${workOrderFG.idabas}`)
             .then(res => res.data)
             .catch(err => {
                 if (err.response?.status == 404) {
@@ -62,7 +62,7 @@ export default function useWorkOrder() {
     const getSFGOutstandingLabels = async (workOrderSFGNumber) => {
         return await axios
             .get(
-                `http://msi-ps.test/api/datalabel/get_sfg_outstanding_label_by_wo/${workOrderSFGNumber}`
+                `http://192.168.0.114:8081/api/datalabel/get_sfg_outstanding_label_by_wo/${workOrderSFGNumber}`
             )
             .then(res => res.data)
             .catch(err => {
@@ -80,7 +80,57 @@ export default function useWorkOrder() {
 
         return await axios
             .post(
-                `http://msi-ps.test/api/workorder/adjust_qty`, form
+                `http://192.168.0.114:8081/api/workorder/adjust_qty`, form
+            )
+            .then(res => {
+                const response = res.data;
+
+                if (!response.status) throw new Error('There is no response data status from server.');
+                if (response.status !== 'success') throw new Error(response.message ?? 'Proses input gagal'); 
+
+                return res.data;
+            })
+            .catch(err => {
+                throw new Error(err.response?.statusText ?? err.message);
+            });
+    }
+
+    const getAllNGClassifications = async() => {
+        return await axios
+            .get(
+                `http://192.168.0.114:8081/api/ngclassifications/get_all`
+            )
+            .then(res => res.data)
+            .catch(err => {
+                if (err.response?.status == 404) {
+                    throw new Error("Data tidak ditemukan atau bukan work order semi finish good.");
+                } else {
+                    throw err;
+                }
+            })
+    }
+
+    const getPullListsByWorkOrderNumber = async(workOrderNumber) => {
+        return await axios
+            .get(
+                `http://192.168.0.114:8081/api/pulllist/get_pull_lists_by_wo/${workOrderNumber}`
+            )
+            .then(res => res.data)
+            .catch(err => {
+                if (err.response?.status == 404) {
+                    throw new Error("Data tidak ditemukan.");
+                } else {
+                    throw err;
+                }
+            })
+    }
+    
+    const submitPullList = async (workOrder, form) => {
+        form.work_order_number = workOrder.number;
+
+        return await axios
+            .post(
+                `http://192.168.0.114:8081/api/pulllist/store`, form
             )
             .then(res => {
                 const response = res.data;
@@ -100,6 +150,9 @@ export default function useWorkOrder() {
         findSemiFinishGoodWorkOrder,
         checkCompabilityWorkOrder,
         getSFGOutstandingLabels,
-        adjustQuantity
+        adjustQuantity,
+        getAllNGClassifications,
+        getPullListsByWorkOrderNumber,
+        submitPullList
     };
 }
