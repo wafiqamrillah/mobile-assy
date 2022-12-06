@@ -3,7 +3,7 @@ import Link from 'next/link';
 import Swal from 'sweetalert2';
 import withReactContent from 'sweetalert2-react-content';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faArrowLeft, faCheck, faCheckCircle, faTimesCircle } from '@fortawesome/free-solid-svg-icons';
+import { faArrowLeft, faCheck, faCheckCircle, faTimesCircle, faSearch } from '@fortawesome/free-solid-svg-icons';
 
 // Components
 import AppLayout from '@/components/layouts/AppLayout';
@@ -32,6 +32,8 @@ export default function AdjustQty() {
 
     // References
     const qrCodeInputEl = useRef(null);
+    const workOrderFGNumberEl = useRef(null);
+    const workOrderSFGNumberEl = useRef(null);
     const adjustmentQtyEl = useRef(0);
     const lineNumberEl = useRef(null);
 
@@ -39,12 +41,6 @@ export default function AdjustQty() {
     const WorkOrder = useWorkOrder();
 
     useEffect(() => {
-        if (!workOrderFG?.number || !workOrderSFG.number) {
-            document.addEventListener('keypress', handleKeyPressEvent);
-        } else {
-            document.removeEventListener('keypress', handleKeyPressEvent);
-        };
-
         setIsScanWoFG(!workOrderFG?.number);
         setIsScanWoSFG(!workOrderSFG?.number);
         setScanStatus(!workOrderFG?.number ? 'scan_wo_fg' : (!workOrderSFG?.number ? 'scan_wo_sfg' : 'input_adjustment'));
@@ -83,16 +79,11 @@ export default function AdjustQty() {
         }
 
         return () => {
-            document.removeEventListener('keypress', handleKeyPressEvent);
         };
     }, [workOrderFG, workOrderSFG, isScanWoFG, isScanWoSFG, sfgOutstandingLabelQty, maximumQty]);
 
-    const handleKeyPressEvent = (e) => {
-        console.log('keypressed');
-        if (e.keyCode !== 13) {
-            qrCodeInputEl.current.value += e.key;
-        } else {
-            console.log(qrCodeInputEl.current.value);
+    const handleKeyDownWorkOrderInputEl = (e) => {
+        if (e?.code === "Enter") {
             submitScan();
         }
     }
@@ -237,29 +228,31 @@ export default function AdjustQty() {
     }
 
     const submitScan = () => {
-        const inputValue = qrCodeInputEl.current.value;
-
         (async () => {
             setIsLoading(true);
-
-            if (!inputValue) {
-                throw new Error("Tidak ada data yang diinput.");
-            }
 
             let result;
 
             switch (scanStatus) {
                 case 'scan_wo_fg':
-                    result = await WorkOrder.findFinishGoodWorkOrder(inputValue);
+                    const wo_fg_number = workOrderFGNumberEl.current?.value;
+                    if (!wo_fg_number) throw new Error("Nomor work order finish good tidak valid!");
+
+                    result = await WorkOrder.findFinishGoodWorkOrder(wo_fg_number);
 
                     if (result) {
+                        workOrderFGNumberEl.current.value = result.number;
                         setWorkOrderFG(result);
                     }
                     break;
                 case 'scan_wo_sfg':
-                    result = await WorkOrder.findSemiFinishGoodWorkOrder(inputValue);
+                    const wo_sfg_number = workOrderSFGNumberEl.current?.value;
+                    if (!wo_sfg_number) throw new Error("Nomor work order semi finish good tidak valid!");
+
+                    result = await WorkOrder.findSemiFinishGoodWorkOrder(wo_sfg_number);
 
                     if (result) {
+                        workOrderSFGNumberEl.current.value = result.number;
                         setWorkOrderSFG(result);
                     }
                     break;
@@ -291,8 +284,6 @@ export default function AdjustQty() {
                 });
             })
             .finally(() => setIsLoading(false));
-
-        qrCodeInputEl.current.value = '';
     }
 
     return (
@@ -321,11 +312,19 @@ export default function AdjustQty() {
                                     Number
                                 </label>
                                 <input
+                                    ref={ workOrderFGNumberEl }
                                     type="text"
-                                    className="p-1 col-span-4 text-sm border border-gray-400 rounded-lg focus:outline-none"
+                                    className="p-1 col-span-4 text-right text-sm bg-blue-200 disabled:bg-gray-300 read-only:bg-gray-300 border-2 disabled:border read-only:border border-blue-400 disabled:border-gray-400 read-only:border-gray-400 rounded-lg focus:outline-none"
                                     name="work_order_fg_number"
-                                    value={ workOrderFG?.number || '' }
-                                    readOnly />
+                                    disabled={ !isScanWoFG }
+                                    onKeyDown={ handleKeyDownWorkOrderInputEl } />
+                                <button
+                                    type="button"
+                                    className="col-span-1 ml-1 p-1 text-white text-sm bg-blue-600 hover:bg-blue-400 disabled:bg-blue-300 border border-blue-700 disabled:border-blue-300 rounded-lg"
+                                    disabled={ !isScanWoFG }
+                                    onClick={ () => submitScan() }>
+                                    <FontAwesomeIcon icon={ faSearch }/>
+                                </button>
                             </div>
                             <div className="grid grid-cols-12 items-center">
                                 <label
@@ -335,7 +334,7 @@ export default function AdjustQty() {
                                 </label>
                                 <input
                                     type="text"
-                                    className="p-1 col-span-8 text-sm border border-gray-400 rounded-lg focus:outline-none"
+                                    className="p-1 col-span-8 text-sm bg-blue-200 disabled:bg-gray-300 read-only:bg-gray-300 border-2 disabled:border read-only:border border-blue-400 disabled:border-gray-400 read-only:border-gray-400 rounded-lg focus:outline-none"
                                     name="work_order_fg_part_name"
                                     value={ workOrderFG?.partdesc || '' }
                                     readOnly />
@@ -348,7 +347,7 @@ export default function AdjustQty() {
                                 </label>
                                 <input
                                     type="number"
-                                    className="p-1 col-span-4 text-sm text-right border border-gray-400 rounded-lg focus:outline-none"
+                                    className="p-1 col-span-4 text-sm text-right bg-blue-200 disabled:bg-gray-300 read-only:bg-gray-300 border-2 disabled:border read-only:border border-blue-400 disabled:border-gray-400 read-only:border-gray-400 rounded-lg focus:outline-none"
                                     name="work_order_fg_order_qty"
                                     value={ workOrderFG?.order_qty ?? 0 }
                                     readOnly />
@@ -361,29 +360,12 @@ export default function AdjustQty() {
                                 </label>
                                 <input
                                     type="number"
-                                    className="p-1 col-span-4 text-sm text-right border border-gray-400 rounded-lg focus:outline-none"
+                                    className="p-1 col-span-4 text-sm text-right bg-blue-200 disabled:bg-gray-300 read-only:bg-gray-300 border-2 disabled:border read-only:border border-blue-400 disabled:border-gray-400 read-only:border-gray-400 rounded-lg focus:outline-none"
                                     name="work_order_fg_outstanding_qty"
                                     value={ workOrderFG?.outstanding_qty ?? 0 }
                                     readOnly />
                             </div>
                         </div>
-                        
-                        {
-                            isScanWoFG ? (
-                                <div className="absolute inset-0 flex items-center transition z-10">
-                                    <div
-                                        className="absolute inset-0 transform transition-all">
-                                        <div className="absolute inset-0 bg-black rounded-lg opacity-75"></div>
-                                    </div>
-
-                                    <div className="overflow-hidden transform transition-all mx-auto">
-                                        <span className="text-white text-xl">
-                                            { isScanWoFG && ("Silahkan scan Work Order Finish Good!") }
-                                        </span>
-                                    </div>
-                                </div>
-                            ) : null
-                        }
                     </div>
                     
                     <hr className="h-[2px] bg-gray-400 rounded-sm" />
@@ -411,11 +393,19 @@ export default function AdjustQty() {
                                     Number
                                 </label>
                                 <input
+                                    ref={ workOrderSFGNumberEl }
                                     type="text"
-                                    className="p-1 col-span-4 text-sm text-right border border-gray-400 rounded-lg focus:outline-none"
+                                    className="p-1 col-span-4 text-sm text-right bg-blue-200 disabled:bg-gray-300 read-only:bg-gray-300 border-2 disabled:border read-only:border border-blue-400 disabled:border-gray-400 read-only:border-gray-400 rounded-lg focus:outline-none"
                                     name="work_order_sfg_number"
-                                    value={ workOrderSFG?.number || '' }
-                                    readOnly />
+                                    disabled={ !(isScanWoSFG && !isScanWoFG) }
+                                    onKeyDown={ handleKeyDownWorkOrderInputEl } />
+                                <button
+                                    type="button"
+                                    className="col-span-1 ml-1 p-1 text-white text-sm bg-blue-600 hover:bg-blue-400 disabled:bg-blue-300 border border-blue-700 disabled:border-blue-300 rounded-lg"
+                                    disabled={ !(isScanWoSFG && !isScanWoFG) }
+                                    onClick={ () => submitScan() }>
+                                    <FontAwesomeIcon icon={ faSearch }/>
+                                </button>
                             </div>
                             <div className="grid grid-cols-12 items-center">
                                 <label
@@ -425,7 +415,7 @@ export default function AdjustQty() {
                                 </label>
                                 <input
                                     type="text"
-                                    className="p-1 col-span-8 text-sm border border-gray-400 rounded-lg focus:outline-none"
+                                    className="p-1 col-span-8 text-sm bg-blue-200 disabled:bg-gray-300 read-only:bg-gray-300 border-2 disabled:border read-only:border border-blue-400 disabled:border-gray-400 read-only:border-gray-400 rounded-lg focus:outline-none"
                                     name="work_order_sfg_part_name"
                                     value={ workOrderSFG?.partdesc || '' }
                                     readOnly />
@@ -438,7 +428,7 @@ export default function AdjustQty() {
                                 </label>
                                 <input
                                     type="number"
-                                    className="p-1 col-span-4 text-sm text-right border border-gray-400 rounded-lg focus:outline-none"
+                                    className="p-1 col-span-4 text-sm text-right bg-blue-200 disabled:bg-gray-300 read-only:bg-gray-300 border-2 disabled:border read-only:border border-blue-400 disabled:border-gray-400 read-only:border-gray-400 rounded-lg focus:outline-none"
                                     name="work_order_sfg_wo_qty"
                                     value={ workOrderSFG?.order_qty ?? 0 }
                                     readOnly />
@@ -451,29 +441,12 @@ export default function AdjustQty() {
                                 </label>
                                 <input
                                     type="number"
-                                    className="p-1 col-span-4 text-sm text-right border border-gray-400 rounded-lg focus:outline-none"
+                                    className="p-1 col-span-4 text-sm text-right bg-blue-200 disabled:bg-gray-300 read-only:bg-gray-300 border-2 disabled:border read-only:border border-blue-400 disabled:border-gray-400 read-only:border-gray-400 rounded-lg focus:outline-none"
                                     name="work_order_sfg_outstanding_qty"
                                     value={ workOrderSFG?.outstanding_qty ?? 0 }
                                     readOnly />
                             </div>
                         </div>
-                        
-                        {
-                            (isScanWoSFG || isScanWoFG) ? (
-                                <div className="absolute inset-0 flex items-center transition z-10">
-                                    <div
-                                        className="absolute inset-0 transform transition-all">
-                                        <div className="absolute inset-0 bg-black rounded-lg opacity-75"></div>
-                                    </div>
-
-                                    <div className="overflow-hidden transform transition-all mx-auto">
-                                        <span className="text-white text-xl">
-                                            { isScanWoSFG && !isScanWoFG && ("Silahkan scan Work Order Semi Finish Good!") }
-                                        </span>
-                                    </div>
-                                </div>
-                            ) : null
-                        }
                     </div>
 
                     {/* Adjustment Card */}
@@ -496,7 +469,7 @@ export default function AdjustQty() {
                                 </label>
                                 <input
                                     type="number"
-                                    className="p-1 w-32 text-right text-sm border border-gray-400 rounded-lg focus:outline-none"
+                                    className="p-1 w-32 text-right text-sm bg-blue-200 disabled:bg-gray-300 read-only:bg-gray-300 border-2 disabled:border read-only:border border-blue-400 disabled:border-gray-400 read-only:border-gray-400 rounded-lg focus:outline-none"
                                     name="result_qty"
                                     value={ sfgOutstandingLabelQty }
                                     readOnly />
@@ -511,7 +484,8 @@ export default function AdjustQty() {
                                     ref={ lineNumberEl }
                                     name="line_number"
                                     defaultValue={ null }
-                                    className={ "p-1 w-32 text-center text-sm rounded-lg focus:outline-none " + (!isScanWoFG && !isScanWoSFG ? 'bg-blue-400 hover:cursor-pointer border-4 border-blue-200' : 'border border-gray-400') }>
+                                    className="p-1 w-32 text-center text-sm bg-blue-200 disabled:bg-gray-300 border-2 disabled:border border-blue-400 disabled:border-gray-400 rounded-lg focus:outline-none"
+                                    disabled={ isScanWoFG && isScanWoSFG }>
                                         <option value={ '' }>--Pilih Line--</option>
                                         <option value={ 1 }>1</option>
                                         <option value={ 2 }>2</option>
@@ -527,10 +501,11 @@ export default function AdjustQty() {
                                     <input
                                         ref={ adjustmentQtyEl }
                                         type="number"
-                                        className={ "w-3/6 p-1 text-right text-sm rounded-lg focus:outline-none " + (!isScanWoFG && !isScanWoSFG ? 'bg-blue-400 hover:cursor-pointer border-4 border-blue-200' : 'border border-gray-400') }
+                                        className="w-3/6 p-1 text-right text-sm hover:cursor-pointer bg-blue-200 disabled:bg-gray-300 border-2 disabled:border border-blue-400 disabled:border-gray-400 rounded-lg focus:outline-none"
                                         name="adjustment_qty"
                                         defaultValue={ 0 }
-                                        readOnly
+                                        disabled={ isScanWoFG && isScanWoSFG }
+                                        readOnly={ !isScanWoFG && !isScanWoSFG }
                                         onClick={ (e) => {
                                             if (!isScanWoFG && !isScanWoSFG) {
                                                 openAdjustmentModal();
@@ -543,7 +518,7 @@ export default function AdjustQty() {
 
                                     <input
                                         type="number"
-                                        className="w-3/6 p-1 text-right text-sm border border-gray-400 rounded-lg focus:outline-none"
+                                        className="w-3/6 p-1 text-right text-sm bg-blue-200 disabled:bg-gray-300 read-only:bg-gray-300 border-2 disabled:border read-only:border border-blue-400 disabled:border-gray-400 read-only:border-gray-400 rounded-lg focus:outline-none"
                                         name="maximum_adjustment_qty"
                                         value={ maximumQty }
                                         readOnly />
@@ -557,7 +532,7 @@ export default function AdjustQty() {
                                 </label>
                                 <input
                                     type="number"
-                                    className="p-1 w-32 text-right text-sm border border-gray-400 rounded-lg focus:outline-none"
+                                    className="p-1 w-32 text-right text-sm bg-blue-200 disabled:bg-gray-300 read-only:bg-gray-300 border-2 disabled:border read-only:border border-blue-400 disabled:border-gray-400 read-only:border-gray-400 rounded-lg focus:outline-none"
                                     name="result_qty"
                                     value={ parseInt(adjustmentQtyEl.current?.value ?? 0) + parseInt((workOrderFG?.order_qty ?? 0) - (workOrderFG?.outstanding_qty ?? 0)) }
                                     readOnly />
@@ -672,8 +647,6 @@ export default function AdjustQty() {
                     }
                 </div>
             </div>
-
-            <input ref={ qrCodeInputEl } type="text" className="bg-transparent" hidden/>
         </AppLayout>
     )
 }
