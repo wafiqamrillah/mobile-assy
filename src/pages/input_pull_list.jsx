@@ -56,7 +56,7 @@ export default function InputPullList() {
                 async() => {
                     const pullListData = await WorkOrder.getPullListsByWorkOrderNumber(workOrderFG.number);
                     
-                    const totalPullListQty = pullListData.reduce((prev, curr) => prev + parseInt(curr.good_qty) + parseInt(curr.ng_qty), 0);
+                    const totalPullListQty = pullListData.reduce((prev, curr) => prev + parseInt(curr.good_qty), 0);
 
                     setMaximumQty(workOrderFG?.order_qty - totalPullListQty);
                 }
@@ -98,6 +98,14 @@ export default function InputPullList() {
             }
         })()
             .catch(err => {
+                FireSwal.fire({
+                    icon: 'error',
+                    title: <strong>Error</strong>,
+                    html: <span>{ err.message }</span>,
+                    showConfirmButton: false,
+                    timer: 3000
+                });
+                
                 woNumberInputEl.current.value = '';
 
                 woNumberInputEl.current.focus();
@@ -455,7 +463,7 @@ export default function InputPullList() {
             </div>
 
             {/* Modals */}
-            <InputGoodQtyModal showModal={ isShowGoodQtyModal } setShowModal={ setIsShowGoodQtyModal } setQty={ setGoodQty } initialValue={ goodQty } maximumValue={ maximumQty - parseInt(ngClassificationLists.map((list) => list.qty).reduce((prevVal, curVal) => prevVal + curVal, 0)) } />
+            <InputGoodQtyModal showModal={ isShowGoodQtyModal } setShowModal={ setIsShowGoodQtyModal } setQty={ setGoodQty } initialValue={ goodQty } maximumValue={ maximumQty } />
             <InputNgClassificationsModal showModal={ isShowNgClassificationModal } setShowModal={ setIsShowNgClassificationModal } lists={ ngClassificationLists } setLists={ setNgClassificationLists } maximumNumber={ maximumQty - goodQty } />
         </AppLayout>
     );
