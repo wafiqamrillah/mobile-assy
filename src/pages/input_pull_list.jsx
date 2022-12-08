@@ -153,7 +153,7 @@ export default function InputPullList() {
             let totalNgQty = 0;
             if (ngClassificationLists.length > 0) {
                 totalNgQty = ngClassificationLists.map(list => {
-                    if (parseInt(list.qty) <= 0) throw new Error('Terdapat ng qty yang kurang dari 0');
+                    if (parseInt(list.qty) <= 0) throw new Error('Terdapat NG qty yang kurang dari 0');
 
                     return list.qty;
                 }).reduce((prev, cur) => prev + cur);

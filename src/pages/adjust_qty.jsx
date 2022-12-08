@@ -437,13 +437,26 @@ export default function AdjustQty() {
                                 <label
                                     htmlFor="work_order_sfg_outstanding_qty"
                                     className="col-span-4 text-sm font-bold">
-                                    Outstanding Qty
+                                    Outstanding Label
                                 </label>
                                 <input
                                     type="number"
                                     className="p-1 col-span-4 text-sm text-right bg-blue-200 disabled:bg-gray-300 read-only:bg-gray-300 border-2 disabled:border read-only:border border-blue-400 disabled:border-gray-400 read-only:border-gray-400 rounded-lg focus:outline-none"
                                     name="work_order_sfg_outstanding_qty"
                                     value={ workOrderSFG?.outstanding_qty ?? 0 }
+                                    readOnly />
+                            </div>
+                            <div className="grid grid-cols-12 items-center">
+                                <label
+                                    htmlFor="result_qty"
+                                    className="col-span-4 text-sm font-bold">
+                                    Outstanding Scan Label
+                                </label>
+                                <input
+                                    type="number"
+                                    className="p-1 col-span-4 text-sm text-right bg-blue-200 disabled:bg-gray-300 read-only:bg-gray-300 border-2 disabled:border read-only:border border-blue-400 disabled:border-gray-400 read-only:border-gray-400 rounded-lg focus:outline-none"
+                                    name="result_qty"
+                                    value={ sfgOutstandingLabelQty }
                                     readOnly />
                             </div>
                         </div>
@@ -461,19 +474,6 @@ export default function AdjustQty() {
 
                         {/* Identity */}
                         <div className="flex flex-col space-y-2">
-                            <div className="flex flex-auto items-center">
-                                <label
-                                    htmlFor="result_qty"
-                                    className="w-1/3 text-sm font-bold">
-                                    Label SFG Outstanding Qty
-                                </label>
-                                <input
-                                    type="number"
-                                    className="p-1 w-32 text-right text-sm bg-blue-200 disabled:bg-gray-300 read-only:bg-gray-300 border-2 disabled:border read-only:border border-blue-400 disabled:border-gray-400 read-only:border-gray-400 rounded-lg focus:outline-none"
-                                    name="result_qty"
-                                    value={ sfgOutstandingLabelQty }
-                                    readOnly />
-                            </div>
                             <div className="flex flex-auto items-center">
                                 <label
                                     htmlFor="adjustment_qty"
@@ -513,7 +513,7 @@ export default function AdjustQty() {
                                         } } />
                                     
                                     <div className="flex-auto text-center">
-                                        /
+                                        of
                                     </div>
 
                                     <input
