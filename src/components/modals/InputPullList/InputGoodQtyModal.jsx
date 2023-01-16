@@ -85,7 +85,7 @@ export default function InputGoodQtyModal (
                         {/* Body */}
                         <div className="flex flex-col space-y-6">
                             <div className="flex items-center justify-center text-4xl">
-                                { value + (maximumValue > 0 ? ` / ${maximumValue}` : '' ) }
+                                { value } / { (maximumValue > 0 ? `${maximumValue}` : 0 ) }
                             </div>
                             
                             <div className="w-full grid grid-cols-3 gap-2">
