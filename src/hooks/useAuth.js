@@ -7,7 +7,7 @@ export default function useAuth({ middleware, redirectIfAuthenticated } = {}) {
     const router = useRouter();
 
     const { data, error, mutate } = useSWR(
-        `http://192.168.0.114:8081/api/auth/get`,
+        `${(router.basePath ?? 'http://192.168.0.235:8080/msi-ps-new').replace('mobile-assy', 'msi-ps-new')}/api/auth/get`,
         async (...args) => axios
             .get(args)
             .then(res => res.data !== '' ? res.data : false)
@@ -19,14 +19,14 @@ export default function useAuth({ middleware, redirectIfAuthenticated } = {}) {
         setStatus(null);
 
         return await axios
-            .post(`http://192.168.0.114:8081/api/auth/login`, props)
+            .post(`${(router.basePath ?? 'http://192.168.0.235:8080/msi-ps-new').replace('mobile-assy', 'msi-ps-new')}/api/auth/login`, props)
             .then(() => mutate());
     }
 
     const logout = async () => {
         if (! error) {
             await axios
-                .post(`http://192.168.0.114:8081/api/auth/logout`)
+                .post(`${(router.basePath ?? 'http://192.168.0.235:8080/msi-ps-new').replace('mobile-assy', 'msi-ps-new')}/api/auth/logout`)
                 .then(() => mutate());
         }
 
