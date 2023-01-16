@@ -54,11 +54,13 @@ export default function InputPullList() {
         if (workOrderFG.number) {
             (
                 async() => {
-                    const pullListData = await WorkOrder.getPullListsByWorkOrderNumber(workOrderFG.number);
+                    // const pullListData = await WorkOrder.getPullListsByWorkOrderNumber(workOrderFG.number);
                     
-                    const totalPullListQty = pullListData.reduce((prev, curr) => prev + parseInt(curr.good_qty), 0);
+                    // const totalPullListQty = pullListData.reduce((prev, curr) => prev + parseInt(curr.good_qty), 0);
 
-                    setMaximumQty(workOrderFG?.order_qty - totalPullListQty);
+                    // setMaximumQty(workOrderFG?.order_qty - totalPullListQty);
+
+                    setMaximumQty(workOrderFG?.outstanding_qty);
                 }
             )();
         } else {
@@ -90,9 +92,12 @@ export default function InputPullList() {
 
             let result;
 
-            result = await WorkOrder.findFinishGoodWorkOrder(inputValue);
+            result = await WorkOrder.findABASWorkOrder(inputValue);
 
             if (result) {
+                if (result.outstanding_qty || result.outstanding_qty === 0) {
+                    if (result.outstanding_qty <= 0) throw new Error("Tidak ada outstanding yang tersedia."); 
+                }
                 woNumberInputEl.current.value = result.number;
                 setWorkOrderFG(result);
             }
@@ -147,7 +152,7 @@ export default function InputPullList() {
     const submitForm = () => {
         try {
             // Periksa data WO Finish Good
-            if (!workOrderFG.id) throw new Error("Data work order belum ditentukan. Periksa kembali form Anda.");
+            if (!workOrderFG.number) throw new Error("Data work order belum ditentukan. Periksa kembali form Anda.");
 
             // Periksa NG qty
             let totalNgQty = 0;
@@ -179,7 +184,7 @@ export default function InputPullList() {
             (async () => {
                 setIsLoading(true);
 
-                if (!workOrderFG.id) {
+                if (!workOrderFG.number) {
                     setWorkOrderFG({});
                     throw new Error("Data work order finish good tidak valid. Mohon input kembali data work order finish good.");
                 }
@@ -193,14 +198,27 @@ export default function InputPullList() {
                     'ng_classifications' : ngClassificationLists
                 };
                 
-                const processResponse = await WorkOrder.submitPullList(workOrderFG, form);
+                // const processResponse = await WorkOrder.submitPullList(workOrderFG, form);
+                const processResponse = await WorkOrder.submitAbasPullList(workOrderFG, form);
 
-                FireSwal.fire({
-                    icon: 'success',
-                    title: <strong>Success</strong>,
-                    html: <span>{ processResponse.message ?? "Data berhasil dibuat" }</span>,
-                    timer: 5000
-                });
+                if ((processResponse.error ?? []).length > 0) {
+                    const first_error_message = processResponse.error[0]; 
+                    if ((processResponse.success ?? []).length === 0) throw new Error(first_error_message); 
+                    const total_error = (processResponse.error ?? []).length;
+                    FireSwal.fire({
+                        icon: 'warning',
+                        title: <strong>Success</strong>,
+                        html: <span>{ `Data berhasil dibuat, namun terdapat ${total_error} proses yang tidak dapat dilakukan. Silahkan periksa data di ABAS. ${first_error_message}` }</span>,
+                        timer: 10000
+                    });
+                } else {
+                    FireSwal.fire({
+                        icon: 'success',
+                        title: <strong>Success</strong>,
+                        html: <span>{ processResponse.message ?? "Data berhasil dibuat" }</span>,
+                        timer: 5000
+                    });
+                }
 
                 return resetForm();
             })()
@@ -314,6 +332,19 @@ export default function InputPullList() {
                                 className="p-1 col-span-4 text-sm text-right bg-blue-200 disabled:bg-gray-300 read-only:bg-gray-300 border-2 disabled:border read-only:border border-blue-400 disabled:border-gray-400 read-only:border-gray-400 rounded-lg focus:outline-none"
                                 name="work_order_fg_order_qty"
                                 value={ workOrderFG?.order_qty ?? 0 }
+                                readOnly />
+                        </div>
+                        <div className="grid grid-cols-12 items-center">
+                            <label
+                                htmlFor="work_order_fg_outstanding_qty"
+                                className="col-span-4 text-sm font-bold">
+                                Outstanding Qty
+                            </label>
+                            <input
+                                type="number"
+                                className="p-1 col-span-4 text-sm text-right bg-blue-200 disabled:bg-gray-300 read-only:bg-gray-300 border-2 disabled:border read-only:border border-blue-400 disabled:border-gray-400 read-only:border-gray-400 rounded-lg focus:outline-none"
+                                name="work_order_fg_outstanding_qty"
+                                value={ workOrderFG?.outstanding_qty ?? 0 }
                                 readOnly />
                         </div>
                     </div>
@@ -448,7 +479,7 @@ export default function InputPullList() {
                 <button
                     className="p-4 bg-green-600 disabled:bg-green-300 rounded-lg"
                     onClick={ () => openConfirmationModal() }
-                    disabled={ !(workOrderFG.id) }>
+                    disabled={ !(workOrderFG.number) }>
                     <span className="text-xl mr-2">
                         <FontAwesomeIcon icon={ faCheckCircle } />
                     </span> Submit
@@ -457,7 +488,7 @@ export default function InputPullList() {
                 <button
                     className="p-4 bg-red-600 disabled:bg-red-300 rounded-lg"
                     onClick={ () => resetForm() }
-                    disabled={ !(workOrderFG.id) }>
+                    disabled={ !(workOrderFG.number) }>
                         Reset
                 </button>
             </div>
