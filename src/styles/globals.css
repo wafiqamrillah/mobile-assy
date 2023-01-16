@@ -6,8 +6,8 @@
 @import 'tailwindcss/components';
 @import 'tailwindcss/utilities';
 
-@layer components {
+@layer base {
   body {
-    @apply bg-indigo-900;
+    @apply bg-indigo-900 text-white font-sans antialiased;
   }
 }
