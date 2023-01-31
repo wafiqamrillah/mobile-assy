@@ -3,12 +3,15 @@ import { useRouter } from 'next/router';
 import Image from 'next/image';
 import Swal from 'sweetalert2';
 import withReactContent from 'sweetalert2-react-content';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 
 // Components
 import AppLayout from '@/components/layouts/AppLayout';
 
 // Hooks
 import useAuth from '@/hooks/useAuth';
+
+import { faArrowLeft } from '@fortawesome/free-solid-svg-icons';
 
 export default function Login() {
     const [isLoading, setIsLoading] = useState(false);
@@ -79,7 +82,7 @@ export default function Login() {
   
     return (
         <AppLayout isLoading={ isLoading } title="Login">
-            <div className="fixed inset-0 flex items-center justify-center">
+            <div className="fixed inset-0 flex flex-col space-y-5 items-center justify-center">
                 <div className="p-4 bg-gray-100 border border-gray-200 rounded-lg text-black shadow-md shadow-deep-orange-500">
                     <div className="flex flex-col space-y-3">
                         <div className="flex items-center justify-center space-x-3">
@@ -110,6 +113,18 @@ export default function Login() {
                                 required={ true }
                             />
                         </form>
+                    </div>
+                </div>
+
+                <div className="p-4 bg-gray-100 border border-gray-200 rounded-lg text-blue-700 shadow-md shadow-deep-orange-500">
+                    <div className="flex flex-col space-y-3">
+                        <div className="flex items-center justify-center">
+                            <a
+                                href={ `${(router.basePath ?? 'http://192.168.0.235:8080/msi-ps-new').replace('mobile-assy', 'msi-ps-new')}` }
+                                className="font-bold">
+                                <FontAwesomeIcon icon={ faArrowLeft }/> Kembali ke ANDON
+                            </a>
+                        </div>
                     </div>
                 </div>
             </div>
