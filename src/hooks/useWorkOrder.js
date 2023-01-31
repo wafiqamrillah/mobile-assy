@@ -76,6 +76,20 @@ export default function useWorkOrder() {
         return partFinishGood.idabas_s == workOrderSFG.idabas;
     }
 
+    const createCompletionConfirmationWorkOrder = async (number) => {
+        return await axios.get(
+            `${(router.basePath ?? 'http://192.168.0.235:8080/msi-ps-new').replace('mobile-assy', 'msi-ps-new')}/api/workorder/create_completion_confirmation/${number}`
+        )
+        .then(res => res.data)
+        .catch(err => {
+            if (err.response?.status == 404) {
+                throw new Error("Data tidak ditemukan.");
+            } else {
+                throw err;
+            }
+        });
+    }
+
     const getSFGOutstandingLabels = async (workOrderSFGNumber) => {
         return await axios
             .get(
@@ -116,6 +130,21 @@ export default function useWorkOrder() {
         return await axios
             .get(
                 `${(router.basePath ?? 'http://192.168.0.235:8080/msi-ps-new').replace('mobile-assy', 'msi-ps-new')}/api/ngclassifications/get_all`
+            )
+            .then(res => res.data)
+            .catch(err => {
+                if (err.response?.status == 404) {
+                    throw new Error("Data tidak ditemukan atau bukan work order semi finish good.");
+                } else {
+                    throw err;
+                }
+            })
+    }
+
+    const getAllWorkCentres = async() => {
+        return await axios
+            .get(
+                `${(router.basePath ?? 'http://192.168.0.235:8080/msi-ps-new').replace('mobile-assy', 'msi-ps-new')}/api/workcentre/get`
             )
             .then(res => res.data)
             .catch(err => {
@@ -168,7 +197,8 @@ export default function useWorkOrder() {
         // If there is no work order number, then show error
         if (!form.work_order_number) throw new Error("Data input tidak valid. Tidak ada nomor work order.");
         // If there is no production date and time inputted, then show error
-        if (!form.production_date || !form.production_time) throw new Error("Data input tidak valid. Tidak ada tanggal atau waktu produksi yang dimasukkan.");
+        // if (!form.production_date || !form.production_time) throw new Error("Data input tidak valid. Tidak ada tanggal atau shift produksi yang dimasukkan.");
+        if (!form.production_date || !form.shift) throw new Error("Data input tidak valid. Tidak ada tanggal atau shift produksi yang dimasukkan.");
 
         let success_responses = [];
         let error_responses = [];
@@ -192,9 +222,11 @@ export default function useWorkOrder() {
                     'wo_number' : form.work_order.number,
                     'wo_number_completion' : `${form.work_order.number}001`,
                     'work_order' : form.work_order,
+                    'work_centre' : form.work_centre,
                     'part' : form.work_order.part,
                     'production_date' : form.production_date,
-                    'production_time' : form.production_time,
+                    // 'production_time' : form.production_time,
+                    'shift' : form.shift,
                     'good_qty' : 0,
                     'ng_qty' : classification.qty,
                     'reason' : classification.ng_code,
@@ -207,9 +239,11 @@ export default function useWorkOrder() {
                 'wo_number' : form.work_order.number,
                 'wo_number_completion' : `${form.work_order.number}001`,
                 'work_order' : form.work_order,
+                'work_centre' : form.work_centre,
                 'part' : form.work_order.part,
                 'production_date' : form.production_date,
-                'production_time' : form.production_time,
+                // 'production_time' : form.production_time,
+                'shift' : form.shift,
                 'good_qty' : good_qty,
                 'ng_qty' : 0,
                 'reason' : null,
@@ -250,9 +284,11 @@ export default function useWorkOrder() {
         findFinishGoodWorkOrder,
         findSemiFinishGoodWorkOrder,
         checkCompabilityWorkOrder,
+        createCompletionConfirmationWorkOrder,
         getSFGOutstandingLabels,
         adjustQuantity,
         getAllNGClassifications,
+        getAllWorkCentres,
         getPullListsByWorkOrderNumber,
         submitPullList,
         submitAbasPullList

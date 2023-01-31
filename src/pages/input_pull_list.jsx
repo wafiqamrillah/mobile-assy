@@ -27,17 +27,21 @@ export default function InputPullList() {
     const [isInputProductionQty, setIsInputProductionQty] = useState(false);
     const [isShowGoodQtyModal, setIsShowGoodQtyModal] = useState(false);
     const [isShowNgClassificationModal, setIsShowNgClassificationModal] = useState(false);
+    const [isInputWorkCentre, setIsInputWorkCentre] = useState(false);
 
     // Props
     const [workOrderFG, setWorkOrderFG] = useState({});
     const [goodQty, setGoodQty] = useState(0);
     const [ngClassificationLists, setNgClassificationLists] = useState([]);
     const [maximumQty, setMaximumQty] = useState(0);
+    const [workCentres, setWorkCentres] = useState([]);
 
     // References
     const woNumberInputEl = useRef('');
+    const workCentreInputEl = useRef('');
     const dateProductionEl = useRef('');
     const timeProductionEl = useRef('');
+    const shiftProductionEl = useRef(1);
 
     // Hooks
     const WorkOrder = useWorkOrder();
@@ -47,9 +51,20 @@ export default function InputPullList() {
 
     // Effect
     useEffect(() => {
+        if (workCentres.length === 0) {
+            (
+                async() => {
+                    const workCentreDatas = (await WorkOrder.getAllWorkCentres() ?? []);
+
+                    setWorkCentres(workCentreDatas);
+                }
+            )();
+        }
+
         setIsScanWoFG(!workOrderFG?.number);
         setIsInputDateTimeProduction(!(!workOrderFG?.number));
         setIsInputProductionQty(!(!workOrderFG?.number));
+        setIsInputWorkCentre(!(!workOrderFG?.number));
 
         if (workOrderFG.number) {
             (
@@ -60,6 +75,7 @@ export default function InputPullList() {
 
                     // setMaximumQty(workOrderFG?.order_qty - totalPullListQty);
 
+                    if (workCentreInputEl.current) workCentreInputEl.current.value = workOrderFG.work_centre?.id;
                     setMaximumQty(workOrderFG?.outstanding_qty);
                 }
             )();
@@ -75,7 +91,7 @@ export default function InputPullList() {
     // Handle onKeyPress workOrderInputEl
     const handleKeyDownWorkOrderInputEl = (e) => {
         if (e?.code === "Enter") {
-            submitSearchWorkOrder();
+            submitCreateCompletionConfirmationWorkOrder();
         }
     }
 
@@ -93,6 +109,45 @@ export default function InputPullList() {
             let result;
 
             result = await WorkOrder.findABASWorkOrder(inputValue);
+
+            if (result) {
+                if (result.outstanding_qty || result.outstanding_qty === 0) {
+                    if (result.outstanding_qty <= 0) throw new Error("Tidak ada outstanding yang tersedia."); 
+                }
+                woNumberInputEl.current.value = result.number;
+                setWorkOrderFG(result);
+            }
+        })()
+            .catch(err => {
+                FireSwal.fire({
+                    icon: 'error',
+                    title: <strong>Error</strong>,
+                    html: <span>{ err.message }</span>,
+                    showConfirmButton: false,
+                    timer: 3000
+                });
+                
+                woNumberInputEl.current.value = '';
+
+                woNumberInputEl.current.focus();
+            })
+            .finally(() => setIsLoading(false));
+    }
+
+    // Handle create completion confirmation of number WO
+    const submitCreateCompletionConfirmationWorkOrder = () => {
+        const inputValue = woNumberInputEl.current.value;
+
+        (async () => {
+            setIsLoading(true);
+
+            if (!inputValue) {
+                throw new Error("Tidak ada data yang diinput.");
+            }
+
+            let result;
+
+            result = await WorkOrder.createCompletionConfirmationWorkOrder(inputValue);
 
             if (result) {
                 if (result.outstanding_qty || result.outstanding_qty === 0) {
@@ -194,8 +249,10 @@ export default function InputPullList() {
                     'good_qty' : goodQty,
                     'ng_qty' : ngClassificationLists.map((list) => list.qty).reduce((prevVal, curVal) => prevVal + curVal, 0),
                     'production_date' : dateProductionEl.current.value,
-                    'production_time' : timeProductionEl.current.value,
-                    'ng_classifications' : ngClassificationLists
+                    // 'production_time' : timeProductionEl.current.value,
+                    'shift' : shiftProductionEl.current.value,
+                    'ng_classifications' : ngClassificationLists,
+                    'work_centre' : workCentreInputEl.current.value,
                 };
                 
                 // const processResponse = await WorkOrder.submitPullList(workOrderFG, form);
@@ -278,7 +335,7 @@ export default function InputPullList() {
                                 type="button"
                                 className="col-span-1 ml-1 p-1 text-white bg-blue-600 hover:bg-blue-400 disabled:bg-blue-300 border disabled:border-0 border-blue-700 rounded-lg"
                                 disabled={ !isScanWoFG }
-                                onClick={ () => submitSearchWorkOrder() }>
+                                onClick={ () => submitCreateCompletionConfirmationWorkOrder() }>
                                 <FontAwesomeIcon icon={ faSearch }/>
                             </button>
                         </div>
@@ -347,6 +404,39 @@ export default function InputPullList() {
                                 value={ workOrderFG?.outstanding_qty ?? 0 }
                                 readOnly />
                         </div>
+                        <div className="grid grid-cols-12 items-center">
+                            <label
+                                htmlFor="work_order_work_centre"
+                                className="col-span-4 text-sm font-bold">
+                                Work Centre
+                            </label>
+                            <select
+                                ref={ workCentreInputEl }
+                                name="work_order_work_centre"
+                                id="work_order_work_centre"
+                                className="p-1 col-span-4 text-sm bg-blue-200 disabled:bg-gray-300 border-2 disabled:border read-only:border border-blue-400 disabled:border-gray-400 rounded-lg focus:outline-none"
+                                disabled={ !isInputWorkCentre}
+                            >
+                                <option value="">
+                                    -- Pilih Mesin --
+                                </option>
+                                {
+                                    workCentres
+                                        .sort(
+                                            (a, b) => {
+                                                const nameA = a.description.toUpperCase();
+                                                const nameB = b.description.toUpperCase();
+                                                if (nameA < nameB) return -1;
+                                                if (nameA > nameB) return 1;
+                                                return 0;
+                                            }
+                                        )
+                                        .map(
+                                            (value, index) => <option key={`work_centre_option_${index}`} value={value.idabas}>{ value.description } </option>
+                                        )
+                                }
+                            </select>
+                        </div>
                     </div>
                 </div>
                 
@@ -374,6 +464,7 @@ export default function InputPullList() {
                             </label>
                             <input
                                 ref={ dateProductionEl }
+                                name="date_production"
                                 type="date"
                                 className="p-1 col-span-2 text-sm bg-blue-200 disabled:bg-gray-300 read-only:bg-gray-300 border-2 disabled:border read-only:border border-blue-400 disabled:border-gray-400 read-only:border-gray-400 rounded-lg focus:outline-none"
                                 defaultValue={ (() => {
@@ -390,7 +481,7 @@ export default function InputPullList() {
                         </div>
 
                         {/* Waktu */}
-                        <div className="grid grid-cols-6 gap-3 items-center">
+                        {/* <div className="grid grid-cols-6 gap-3 items-center">
                             <label
                                 htmlFor="time_production"
                                 className="col-span-2 text-sm font-bold"
@@ -411,6 +502,30 @@ export default function InputPullList() {
                                 })() }
                                 disabled={ !isInputDateTimeProduction }
                                 />
+                        </div> */}
+
+                        {/* Shift */}
+                        <div className="grid grid-cols-6 gap-3 items-center">
+                            <label
+                                htmlFor="shift_production"
+                                className="col-span-2 text-sm font-bold"
+                                >
+                                Shift
+                            </label>
+                            <input
+                                ref={ shiftProductionEl }
+                                name="shift_production"
+                                type="number"
+                                className="p-1 col-span-2 text-sm text-right bg-blue-200 disabled:bg-gray-300 read-only:bg-gray-300 border-2 disabled:border read-only:border border-blue-400 disabled:border-gray-400 read-only:border-gray-400 rounded-lg focus:outline-none"
+                                defaultValue={ 1 }
+                                min={ 1 }
+                                max={ 3 }
+                                onChange={ (e) => {
+                                    const currentValue = e.target.value;
+                                    if (shiftProductionEl.current) shiftProductionEl.current.value = currentValue >= 1 && currentValue <= 3 ? currentValue : (currentValue > 3 ? 3 : 1);
+                                } }
+                                disabled={ !isInputDateTimeProduction }
+                            />
                         </div>
                     </div>
                     
