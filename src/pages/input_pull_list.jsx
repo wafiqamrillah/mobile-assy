@@ -54,11 +54,24 @@ export default function InputPullList() {
         if (workCentres.length === 0) {
             (
                 async() => {
+                    setIsLoading(true);
                     const workCentreDatas = (await WorkOrder.getAllWorkCentres() ?? []);
 
                     setWorkCentres(workCentreDatas);
                 }
-            )();
+            )()
+                .catch(err => {
+                    FireSwal.fire({
+                        icon: 'error',
+                        title: <strong>Error</strong>,
+                        html: <span>{ err.message }</span>,
+                        showConfirmButton: false,
+                        timer: 3000
+                    });
+
+                    setWorkCentres([]);
+                })
+                .finally(() => setIsLoading(false));
         }
 
         setIsScanWoFG(!workOrderFG?.number);

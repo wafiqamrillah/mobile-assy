@@ -149,7 +149,7 @@ export default function useWorkOrder() {
             .then(res => res.data)
             .catch(err => {
                 if (err.response?.status == 404) {
-                    throw new Error("Data tidak ditemukan atau bukan work order semi finish good.");
+                    throw new Error("Data list work centre tidak dapat diakses.");
                 } else {
                     throw err;
                 }
